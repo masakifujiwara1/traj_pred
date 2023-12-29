@@ -110,7 +110,16 @@ loader_train = DataLoader(
 node_features = 4
 output_dim = 4
 num_heads = 1
-model = GAT_GRU(node_features, output_dim, 8, 1).cuda()
+# model = GAT_GRU(node_features, output_dim, 8, 1).cuda()
+
+kernel_size = (3, 8)
+in_channels = 4
+out_channels = 10
+assert len(kernel_size) == 2
+assert kernel_size[0] % 2 == 1
+padding = ((kernel_size[0] - 1) // 2, 0)
+model = ConvTemporalGraphical(in_channels, out_channels,
+                                         kernel_size[1]).cuda()
 
 #Training settings 
 
@@ -156,7 +165,7 @@ def train(epoch):
         obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,\
          loss_mask,V_obs,A_obs,V_tr,A_tr = batch
 
-        # print(A_obs)
+        # print(V_obs.shape, V_obs)
 
         optimizer.zero_grad()
         #Forward
@@ -177,7 +186,8 @@ def train(epoch):
         #     print(data.x.shape, data.edge_index.shape)
         #     print(data.x, data.edge_index)
         #     V_pred = model(data.x, data.edge_index)
-        V_pred = model(V_obs, A_obs)
+        V_pred, A_pred = model(V_obs_tmp, A_obs.squeeze())
+        print(V_pred.shape, A_pred.shape)
 
         # convert edge_index
         # V_pred_all = []
