@@ -2,72 +2,50 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
+from torch_geometric.utils import dense_to_sparse
 
-class GAT_GRU(nn.Module):
-    def __init__(self, in_channels, out_channels, hidden_channels, num_layers):
-        super(GAT_GRU, self).__init__()
-        self.conv1 = GATConv(in_channels, hidden_channels, heads=4)
-        self.conv2 = GATConv(hidden_channels * 4, out_channels, heads=4)
-        self.gru = nn.GRU(out_channels, hidden_channels, num_layers=num_layers)
+class GAT_TimeSeriesLayer(nn.Module):
+    def __init__(self, in_features, hidden_features, out_features, obs_seq_len, pred_seq_len, num_heads):
+        super(GAT_TimeSeriesLayer, self).__init__()
+        self.pred_seq_len = pred_seq_len
+        self.out_features = out_features
+        self.hidden_features = hidden_features
+        self.gat = GATConv(in_channels=in_features, out_channels=hidden_features, heads=num_heads)
+        self.gru = nn.GRU(input_size=hidden_features, hidden_size=hidden_features, batch_first=True)
+        self.out = nn.Linear(in_features=hidden_features, out_features=out_features)
+        self.conv = nn.Conv2d(obs_seq_len, pred_seq_len, 3, padding=1)
 
-    def forward(self, x, edge_index):
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = F.relu(self.conv2(x, edge_index))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = x.permute(1, 2, 0)
-        x, _ = self.gru(x)
-        x = x.permute(2, 0, 1)
-        return x
+    def forward(self, x, adj_matrix):
+        batch_size, seq_len, num_nodes, num_features = x.size()
+        gat_output_reshaped = torch.empty(batch_size, seq_len, num_nodes, self.hidden_features)
 
-class ConvTemporalGraphical(nn.Module):
-    #Source : https://github.com/yysijie/st-gcn/blob/master/net/st_gcn.py
-    r"""The basic module for applying a graph convolution.
-    Args:
-        in_channels (int): Number of channels in the input sequence data
-        out_channels (int): Number of channels produced by the convolution
-        kernel_size (int): Size of the graph convolving kernel
-        t_kernel_size (int): Size of the temporal convolving kernel
-        t_stride (int, optional): Stride of the temporal convolution. Default: 1
-        t_padding (int, optional): Temporal zero-padding added to both sides of
-            the input. Default: 0
-        t_dilation (int, optional): Spacing between temporal kernel elements.
-            Default: 1
-        bias (bool, optional): If ``True``, adds a learnable bias to the output.
-            Default: ``True``
-    Shape:
-        - Input[0]: Input graph sequence in :math:`(N, in_channels, T_{in}, V)` format
-        - Input[1]: Input graph adjacency matrix in :math:`(K, V, V)` format
-        - Output[0]: Outpu graph sequence in :math:`(N, out_channels, T_{out}, V)` format
-        - Output[1]: Graph adjacency matrix for output data in :math:`(K, V, V)` format
-        where
-            :math:`N` is a batch size,
-            :math:`K` is the spatial kernel size, as :math:`K == kernel_size[1]`,
-            :math:`T_{in}/T_{out}` is a length of input/output sequence,
-            :math:`V` is the number of graph nodes. 
-    """
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 t_kernel_size=1,
-                 t_stride=1,
-                 t_padding=0,
-                 t_dilation=1,
-                 bias=True):
-        super(ConvTemporalGraphical,self).__init__()
-        self.kernel_size = kernel_size
-        self.conv = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=(t_kernel_size, 1),
-            padding=(t_padding, 0),
-            stride=(t_stride, 1),
-            dilation=(t_dilation, 1),
-            bias=bias)
+        for time_step in range(seq_len):
+            x_t = x[:, time_step, :, :].contiguous().view(-1, num_features)
+            adj = adj_matrix[:, time_step, :, :]
+            adj_t, _ = dense_to_sparse(adj)
+            gat_output = self.gat(x_t, adj_t)
+            gat_output_reshaped[:, time_step, :, :] = gat_output.view(batch_size, num_nodes, -1)
 
-    def forward(self, x, A):
-        assert A.size(0) == self.kernel_size
-        x = self.conv(x)
-        x = torch.einsum('nctv,tvw->nctw', (x, A))
-        return x.contiguous(), A
+        gat_output_reshaped = gat_output_reshaped.view(batch_size*num_nodes, seq_len, self.hidden_features)
+
+        gru_output, _ = self.gru(gat_output_reshaped)
+        gru_output_reshaped = gru_output.view(batch_size, num_nodes, seq_len, self.hidden_features)
+        gru_output_reshaped = gru_output_reshaped.permute(0, 2, 1, 3)
+
+        conv_output = self.conv(gru_output_reshaped)
+        conv_output = conv_output.view(-1, self.hidden_features)
+        out = self.out(conv_output)
+        out_reshaped = out.view(batch_size, self.pred_seq_len, num_nodes, self.out_features)
+
+        return out_reshaped
+
+# Initialize the model
+model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=2, obs_seq_len=8, pred_seq_len=12, num_heads=1)
+
+# Dummy data
+x = torch.rand(1, 8, 3, 4)  # batch_size, seq_length, num_nodes, node_features
+adj_matrix = torch.rand(1, 8, 3, 3)  # batch_size, seq_length, num_nodes, num_nodes
+
+# Forward pass
+output = model(x, adj_matrix)
+print("1 :", output.shape)  # Should be torch.Size([1, 12, 3, 2])
