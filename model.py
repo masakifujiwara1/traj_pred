@@ -14,10 +14,11 @@ class GAT_TimeSeriesLayer(nn.Module):
         self.gru = nn.GRU(input_size=hidden_features, hidden_size=hidden_features, batch_first=True)
         self.out = nn.Linear(in_features=hidden_features, out_features=out_features)
         self.conv = nn.Conv2d(obs_seq_len, pred_seq_len, 3, padding=1)
+        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
     def forward(self, x, adj_matrix):
         batch_size, seq_len, num_nodes, num_features = x.size()
-        gat_output_reshaped = torch.empty(batch_size, seq_len, num_nodes, self.hidden_features)
+        gat_output_reshaped = torch.empty(batch_size, seq_len, num_nodes, self.hidden_features).to(self.device)
 
         for time_step in range(seq_len):
             x_t = x[:, time_step, :, :].contiguous().view(-1, num_features)
@@ -41,13 +42,13 @@ class GAT_TimeSeriesLayer(nn.Module):
 
 
 # debug
-# # Initialize the model
-# model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=2, obs_seq_len=8, pred_seq_len=12, num_heads=1)
+# Initialize the model
+# model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=2, obs_seq_len=8, pred_seq_len=12, num_heads=1).cuda()
 
 # # Dummy data
-# x = torch.rand(1, 8, 3, 4)  # batch_size, seq_length, num_nodes, node_features
-# adj_matrix = torch.rand(1, 8, 3, 3)  # batch_size, seq_length, num_nodes, num_nodes
+# x = torch.rand(1, 8, 3, 4).cuda()  # batch_size, seq_length, num_nodes, node_features
+# adj_matrix = torch.rand(1, 8, 3, 3).cuda()  # batch_size, seq_length, num_nodes, num_nodes
 
 # # Forward pass
 # output = model(x, adj_matrix)
-# print("1 :", output.shape)  # Should be torch.Size([1, 12, 3, 2])
+# print("1 :", output.shape, output.device)  # Should be torch.Size([1, 12, 3, 2])
