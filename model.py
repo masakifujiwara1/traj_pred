@@ -39,13 +39,15 @@ class GAT_TimeSeriesLayer(nn.Module):
 
         return out_reshaped
 
-# Initialize the model
-model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=2, obs_seq_len=8, pred_seq_len=12, num_heads=1)
 
-# Dummy data
-x = torch.rand(1, 8, 3, 4)  # batch_size, seq_length, num_nodes, node_features
-adj_matrix = torch.rand(1, 8, 3, 3)  # batch_size, seq_length, num_nodes, num_nodes
+# debug
+# # Initialize the model
+# model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=2, obs_seq_len=8, pred_seq_len=12, num_heads=1)
 
-# Forward pass
-output = model(x, adj_matrix)
-print("1 :", output.shape)  # Should be torch.Size([1, 12, 3, 2])
+# # Dummy data
+# x = torch.rand(1, 8, 3, 4)  # batch_size, seq_length, num_nodes, node_features
+# adj_matrix = torch.rand(1, 8, 3, 3)  # batch_size, seq_length, num_nodes, num_nodes
+
+# # Forward pass
+# output = model(x, adj_matrix)
+# print("1 :", output.shape)  # Should be torch.Size([1, 12, 3, 2])
