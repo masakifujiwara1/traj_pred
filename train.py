@@ -19,7 +19,7 @@ from numpy import linalg as LA
 import networkx as nx
 
 from utils import * 
-# from metrics import * 
+from metrics import * 
 import pickle
 import argparse
 from torch import autograd
@@ -76,7 +76,7 @@ data_set = './datasets/'+args.dataset+'/'
 
 dset_train = TrajectoryDataset(
         # data_set+'train/',
-        './round_dataset/',
+        './dataset_split/eth/train/',
         obs_len=obs_seq_len,
         pred_len=pred_seq_len,
         skip=1,norm_lap_matr=True)
@@ -88,17 +88,18 @@ loader_train = DataLoader(
         num_workers=0)
 
 
-# dset_val = TrajectoryDataset(
-#         data_set+'val/',
-#         obs_len=obs_seq_len,
-#         pred_len=pred_seq_len,
-#         skip=1,norm_lap_matr=True)
+dset_val = TrajectoryDataset(
+        # data_set+'val/',
+        './dataset_split/eth/val/',
+        obs_len=obs_seq_len,
+        pred_len=pred_seq_len,
+        skip=1,norm_lap_matr=True)
 
-# loader_val = DataLoader(
-#         dset_val,
-#         batch_size=1, #This is irrelative to the args batch size parameter
-#         shuffle =False,
-#         num_workers=1)
+loader_val = DataLoader(
+        dset_val,
+        batch_size=1, #This is irrelative to the args batch size parameter
+        shuffle =False,
+        num_workers=1)
 
 
 #Defining the model 
@@ -118,8 +119,7 @@ out_channels = 10
 assert len(kernel_size) == 2
 assert kernel_size[0] % 2 == 1
 padding = ((kernel_size[0] - 1) // 2, 0)
-model = ConvTemporalGraphical(in_channels, out_channels,
-                                         kernel_size[1]).cuda()
+model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=5, obs_seq_len=8, pred_seq_len=12, num_heads=1).cuda()
 
 #Training settings 
 
@@ -158,6 +158,7 @@ def train(epoch):
 
 
     for cnt,batch in enumerate(loader_train): 
+        # print(cnt.shape, batch.shape)
         batch_count+=1
 
         #Get data
@@ -171,7 +172,7 @@ def train(epoch):
         #Forward
         #V_obs = batch,seq,node,feat
         #V_obs_tmp = batch,feat,seq,node
-        V_obs_tmp =V_obs.permute(0,3,1,2)
+        # V_obs_tmp =V_obs.permute(0,3,1,2)
 
         # print(V_obs.shape)
 
@@ -186,8 +187,8 @@ def train(epoch):
         #     print(data.x.shape, data.edge_index.shape)
         #     print(data.x, data.edge_index)
         #     V_pred = model(data.x, data.edge_index)
-        V_pred, A_pred = model(V_obs_tmp, A_obs.squeeze())
-        print(V_pred.shape, A_pred.shape)
+        V_pred= model(V_obs, A_obs)
+        # print(V_pred.shape)
 
         # convert edge_index
         # V_pred_all = []
@@ -211,7 +212,7 @@ def train(epoch):
 
         # V_pred,_ = model(V_obs_tmp,A_obs.squeeze())
         
-        V_pred = V_pred.permute(0,2,3,1)
+        # V_pred = V_pred.permute(0,2,3,1)
         
         
 
@@ -266,9 +267,10 @@ def vald(epoch):
 
         V_obs_tmp =V_obs.permute(0,3,1,2)
 
-        V_pred,_ = model(V_obs_tmp,A_obs.squeeze())
+        # V_pred,_ = model(V_obs_tmp,A_obs.squeeze())
+        V_pred = model(V_obs,A_obs)
         
-        V_pred = V_pred.permute(0,2,3,1)
+        # V_pred = V_pred.permute(0,2,3,1)
         
         V_tr = V_tr.squeeze()
         A_tr = A_tr.squeeze()
