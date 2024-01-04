@@ -1,5 +1,5 @@
 # ファイルを読み込んでデータを取得
-file_path = "./dataset/obsmat.txt"  # ファイルのパスを指定してください
+file_path = "./dataset_org/zara02/obsmat.txt"  # ファイルのパスを指定してください
 
 with open(file_path, "r") as file:
     lines = file.readlines()
@@ -15,7 +15,7 @@ for line in lines:
     rounded_lines.append(rounded_line)
 
 # 新しいファイルに書き出す
-rounded_file_path = "./round_dataset/rounded.txt"  # 書き出すファイルのパスを指定してください
+rounded_file_path = "./round_dataset/zara02/rounded.txt"  # 書き出すファイルのパスを指定してください
 
 with open(rounded_file_path, "w") as rounded_file:
     for line in rounded_lines:

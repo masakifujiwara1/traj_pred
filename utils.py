@@ -177,9 +177,9 @@ class TrajectoryDataset(Dataset):
 
         # Convert numpy -> Torch Tensor
         self.obs_traj = torch.from_numpy(
-            seq_list[:, :, :self.obs_len]).type(torch.float)
+            seq_list[:, :2, :self.obs_len]).type(torch.float)
         self.pred_traj = torch.from_numpy(
-            seq_list[:, :, self.obs_len:]).type(torch.float)
+            seq_list[:, :2, self.obs_len:]).type(torch.float)
         self.obs_traj_rel = torch.from_numpy(
             seq_list_rel[:, :, :self.obs_len]).type(torch.float)
         self.pred_traj_rel = torch.from_numpy(

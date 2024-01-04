@@ -57,7 +57,7 @@ parser.add_argument('--lr_sh_rate', type=int, default=150,
                     help='number of steps to drop the lr')  
 parser.add_argument('--use_lrschd', action="store_true", default=False,
                     help='Use lr rate scheduler')
-parser.add_argument('--tag', default='tag',
+parser.add_argument('--tag', default='fix_datasets_eth',
                     help='personal tag for the model ')
                     
 args = parser.parse_args()
@@ -75,8 +75,8 @@ pred_seq_len = args.pred_seq_len
 data_set = './datasets/'+args.dataset+'/'
 
 dset_train = TrajectoryDataset(
-        # data_set+'train/',
-        './dataset_split/eth/train/',
+        data_set+'train/',
+        # './dataset_split/eth/train/',
         obs_len=obs_seq_len,
         pred_len=pred_seq_len,
         skip=1,norm_lap_matr=True)
@@ -89,8 +89,8 @@ loader_train = DataLoader(
 
 
 dset_val = TrajectoryDataset(
-        # data_set+'val/',
-        './dataset_split/eth/val/',
+        data_set+'val/',
+        # './dataset_split/eth/val/',
         obs_len=obs_seq_len,
         pred_len=pred_seq_len,
         skip=1,norm_lap_matr=True)
