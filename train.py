@@ -24,7 +24,7 @@ import pickle
 import argparse
 from torch import autograd
 import torch.optim.lr_scheduler as lr_scheduler
-from model import *
+from model_depth import *
 
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
@@ -34,9 +34,9 @@ parser = argparse.ArgumentParser()
 #Model specific parameters
 parser.add_argument('--input_size', type=int, default=4)
 parser.add_argument('--output_size', type=int, default=5)
-parser.add_argument('--n_stgcnn', type=int, default=1,help='Number of ST-GCNN layers')
-parser.add_argument('--n_txpcnn', type=int, default=5, help='Number of TXPCNN layers')
-parser.add_argument('--kernel_size', type=int, default=3)
+# parser.add_argument('--n_stgcnn', type=int, default=1,help='Number of ST-GCNN layers')
+# parser.add_argument('--n_txpcnn', type=int, default=5, help='Number of TXPCNN layers')
+# parser.add_argument('--kernel_size', type=int, default=3)
 
 #Data specifc paremeters
 parser.add_argument('--obs_seq_len', type=int, default=8)
@@ -57,7 +57,7 @@ parser.add_argument('--lr_sh_rate', type=int, default=150,
                     help='number of steps to drop the lr')  
 parser.add_argument('--use_lrschd', action="store_true", default=False,
                     help='Use lr rate scheduler')
-parser.add_argument('--tag', default='fix_datasets_eth',
+parser.add_argument('--tag', default='tag',
                     help='personal tag for the model ')
                     
 args = parser.parse_args()
