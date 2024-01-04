@@ -10,6 +10,7 @@ class GAT_TimeSeriesLayer(nn.Module):
         self.pred_seq_len = pred_seq_len
         self.out_features = out_features
         self.hidden_features = hidden_features
+        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
         # self.gat = GATConv(in_channels=in_features, out_channels=hidden_features, heads=num_heads)
         self.gat1 = GAT_Layer(in_features, hidden_features, num_heads)
         self.gat2 = GAT_Layer(hidden_features*num_heads, hidden_features, num_heads=1)
@@ -17,8 +18,9 @@ class GAT_TimeSeriesLayer(nn.Module):
         self.out1 = nn.Linear(in_features=hidden_features, out_features=hidden_features)
         self.out2 = nn.Linear(in_features=hidden_features, out_features=out_features)
         self.conv = nn.Conv2d(obs_seq_len, pred_seq_len, 3, padding=1)
-        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
         self.prelu = nn.PReLU()
+        self.dropout = nn.Dropout(p=0.2)
+
 
     def forward(self, x, adj_matrix):
         batch_size, seq_len, num_nodes, num_features = x.size()
@@ -28,8 +30,10 @@ class GAT_TimeSeriesLayer(nn.Module):
         # GAT layer
         x1 = self.gat1(x, adj_matrix)
         x2 = self.prelu(x1)
+        x2 = self.dropout(x2)
         x3 = self.gat2(x2, adj_matrix)
         x4 = self.prelu(x3)
+        x4 = self.dropout(x4)
 
         x4 = x4.view(batch_size*num_nodes, seq_len, self.hidden_features)
 
@@ -46,6 +50,7 @@ class GAT_TimeSeriesLayer(nn.Module):
         # FC layer
         x8 = self.out1(x7)
         x9 = self.prelu(x8)
+        x9 = self.dropout(x9)
         x10 = self.out2(x9)
         x10 = x10.view(batch_size, self.pred_seq_len, num_nodes, self.out_features)
 
@@ -54,6 +59,8 @@ class GAT_TimeSeriesLayer(nn.Module):
 class GAT_Layer(nn.Module):
     def __init__(self, in_features, hidden_features, num_heads):
         super(GAT_Layer, self).__init__()
+        self.hidden_features = hidden_features
+        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
         self.gat = GATConv(in_channels=in_features, out_channels=hidden_features, heads=num_heads)
 
     def forward(self, x, adj_matrix):

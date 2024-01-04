@@ -29,6 +29,8 @@ from model_depth import *
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
 
+from torch.utils.tensorboard import SummaryWriter
+
 parser = argparse.ArgumentParser()
 
 #Model specific parameters
@@ -138,7 +140,7 @@ if not os.path.exists(checkpoint_dir):
 with open(checkpoint_dir+'args.pkl', 'wb') as fp:
     pickle.dump(args, fp)
     
-
+writer = SummaryWriter(log_dir='./runs')
 
 print('Data and model loaded')
 print('Checkpoint dir:', checkpoint_dir)
@@ -146,6 +148,8 @@ print('Checkpoint dir:', checkpoint_dir)
 #Training 
 metrics = {'train_loss':[],  'val_loss':[]}
 constant_metrics = {'min_val_epoch':-1, 'min_val_loss':9999999999999999}
+
+tensorboard_count = 0
 
 def train(epoch):
     global metrics,loader_train
@@ -160,6 +164,7 @@ def train(epoch):
     for cnt,batch in enumerate(loader_train): 
         # print(cnt.shape, batch.shape)
         batch_count+=1
+        tensorboard_count+=1
 
         #Get data
         batch = [tensor.cuda() for tensor in batch]
@@ -240,6 +245,9 @@ def train(epoch):
             optimizer.step()
             #Metrics
             loss_batch += loss.item()
+
+            writer.add_scalar("loss", loss.item(), tensorboard_count)
+
             print('TRAIN:','\t Epoch:', epoch,'\t Loss:',loss_batch/batch_count)
             
     metrics['train_loss'].append(loss_batch/batch_count)
