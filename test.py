@@ -11,7 +11,7 @@ import glob
 import torch.distributions.multivariate_normal as torchdist
 from utils import * 
 from metrics import * 
-from model_depth import GAT_TimeSeriesLayer
+from model_depth_fc_fix import GAT_TimeSeriesLayer
 import copy
 
 def test(KSTEPS=20):
@@ -132,7 +132,7 @@ def test(KSTEPS=20):
     return ade_,fde_,raw_data_dict
 
 
-paths = ['./checkpoint/*GAT-eth*']
+paths = ['./checkpoint/*eth_debug*']
 KSTEPS=20
 
 print("*"*50)
@@ -168,7 +168,8 @@ for feta in range(len(paths)):
         #Data prep     
         obs_seq_len = args.obs_seq_len
         pred_seq_len = args.pred_seq_len
-        data_set = './datasets/'+args.dataset+'/'
+        # data_set = './datasets/'+args.dataset+'/'
+        data_set = './datasets_STGCNN/'+args.dataset+'/'
         # data_set = './dataset_split/eth/'
 
         dset_test = TrajectoryDataset(
@@ -186,7 +187,7 @@ for feta in range(len(paths)):
 
 
         #Defining the model 
-        model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=5, obs_seq_len=8, pred_seq_len=12, num_heads=1).cuda()
+        model = GAT_TimeSeriesLayer(in_features=2, hidden_features=16, out_features=5, obs_seq_len=8, pred_seq_len=12, num_heads=1).cuda()
         model.load_state_dict(torch.load(model_path))
 
 

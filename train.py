@@ -24,7 +24,7 @@ import pickle
 import argparse
 from torch import autograd
 import torch.optim.lr_scheduler as lr_scheduler
-from model_depth import *
+from model_depth_fc_fix import *
 
 from torch_geometric.nn import GATConv
 from torch_geometric.data import Data
@@ -74,7 +74,9 @@ def graph_loss(V_pred,V_target):
 #Data prep     
 obs_seq_len = args.obs_seq_len
 pred_seq_len = args.pred_seq_len
-data_set = './datasets/'+args.dataset+'/'
+# data_set = './datasets/'+args.dataset+'/'
+# data_set = './dataset_split/'+args.dataset+'/'
+data_set = './datasets_STGCNN/'+args.dataset+'/'
 
 dset_train = TrajectoryDataset(
         data_set+'train/',
@@ -121,11 +123,13 @@ out_channels = 10
 assert len(kernel_size) == 2
 assert kernel_size[0] % 2 == 1
 padding = ((kernel_size[0] - 1) // 2, 0)
-model = GAT_TimeSeriesLayer(in_features=4, hidden_features=64, out_features=5, obs_seq_len=8, pred_seq_len=12, num_heads=1).cuda()
+model = GAT_TimeSeriesLayer(in_features=2, hidden_features=16, out_features=5, obs_seq_len=8, pred_seq_len=12, num_heads=1).cuda()
 
 #Training settings 
 
-optimizer = optim.SGD(model.parameters(),lr=args.lr)
+# optimizer = optim.SGD(model.parameters(),lr=args.lr)
+optimizer = optim.Adam(model.parameters(), eps=1e-2, weight_decay=5e-4)
+
 
 if args.use_lrschd:
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_sh_rate, gamma=0.2)
@@ -149,10 +153,8 @@ print('Checkpoint dir:', checkpoint_dir)
 metrics = {'train_loss':[],  'val_loss':[]}
 constant_metrics = {'min_val_epoch':-1, 'min_val_loss':9999999999999999}
 
-tensorboard_count = 0
-
 def train(epoch):
-    global metrics,loader_train
+    global metrics,loader_train,tensorboard_count
     model.train()
     loss_batch = 0 
     batch_count = 0
@@ -306,6 +308,7 @@ def vald(epoch):
         constant_metrics['min_val_epoch'] = epoch
         torch.save(model.state_dict(),checkpoint_dir+'val_best.pth')  # OK
 
+tensorboard_count = 0
 
 print('Training started ...')
 for epoch in range(args.num_epochs):
